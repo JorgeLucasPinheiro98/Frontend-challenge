@@ -1,0 +1,50 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@600;700;800&family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #140e0a;
+  --foreground: #f5efea;
+  --card: #1e150f;
+  --card-foreground: #f5efea;
+  --popover: #1e150f;
+  --popover-foreground: #f5efea;
+  --primary: #d48844;
+  --primary-foreground: #140e0a;
+  --secondary: #281c14;
+  --secondary-foreground: #f5efea;
+  --muted: #281c14;
+  --muted-foreground: #a39589;
+  --accent: #2d1e14;
+  --accent-foreground: #f5efea;
+  --destructive: #e05252;
+  --destructive-foreground: #ffffff;
+  --border: #33251b;
+  --input: #33251b;
+  --ring: #d48844;
+  --radius: 0.25rem;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html {
+    color-scheme: dark;
+    scroll-behavior: smooth;
+    font-family: 'Space Mono', monospace;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: 'Space Mono', monospace;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+
+  h1 {
+    font-family: 'Inter', sans-serif;
+  }
+}
