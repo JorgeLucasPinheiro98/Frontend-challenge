@@ -1,6 +1,6 @@
 import { useRef, useState } from "react"
 import { Link } from "@tanstack/react-router"
-import { Eye, EyeOff } from "lucide-react"
+import { ChevronLeft, Eye, EyeOff } from "lucide-react"
 import type { User } from "@/domain/types"
 import {
   useChangePassword,
@@ -140,17 +140,30 @@ function ProfileContent({ user }: { user: User }) {
     catalogQuery.data?.data.filter((n) => favoriteIds.includes(n.id)) ?? []
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+    <div className="mx-auto max-w-7xl px-4 pb-10 pt-4 sm:px-6 md:py-8 lg:px-8">
+      {/* Cabeçalho Mobile */}
+      <div className="relative mb-6 flex items-center justify-center md:hidden">
+        <Link
+          to="/"
+          search={{}}
+          aria-label="Voltar ao início"
+          className="absolute left-0 flex size-10 items-center justify-center rounded-full bg-card text-primary"
+        >
+          <ChevronLeft className="size-5" />
+        </Link>
+        <span className="text-base font-bold text-foreground">Meu perfil</span>
+      </div>
+
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-12">
         <div className="lg:col-span-3">
           <AccountSidebar activeSection="profile" />
         </div>
 
-        <div className="space-y-10 lg:col-span-9">
+        <div className="space-y-8 lg:col-span-9">
           <form
             onSubmit={handleSaveProfile}
             noValidate
-            className="space-y-6 rounded-xl border border-border bg-card/50 p-6 text-xs"
+            className="space-y-6 rounded-2xl bg-card/60 p-5 text-xs md:rounded-none md:bg-transparent md:p-0"
           >
             <h1 className="text-base font-bold text-foreground">
               Perfil do colecionador
@@ -167,7 +180,7 @@ function ProfileContent({ user }: { user: User }) {
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   aria-invalid={Boolean(profileErrors.name)}
-                  className="mt-1.5 h-10 w-full rounded-md border border-input bg-background px-3 text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  className="mt-1.5 h-11 w-full rounded-xl border border-input bg-[#17100B] px-3 text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:h-10 md:rounded-sm"
                 />
                 {profileErrors.name && (
                   <p role="alert" className="mt-1 text-[11px] text-red-400">
@@ -186,7 +199,7 @@ function ProfileContent({ user }: { user: User }) {
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   aria-invalid={Boolean(profileErrors.username)}
-                  className="mt-1.5 h-10 w-full rounded-md border border-input bg-background px-3 text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  className="mt-1.5 h-11 w-full rounded-xl border border-input bg-[#17100B] px-3 text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:h-10 md:rounded-sm"
                 />
                 {profileErrors.username && (
                   <p role="alert" className="mt-1 text-[11px] text-red-400">
@@ -205,7 +218,7 @@ function ProfileContent({ user }: { user: User }) {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   aria-invalid={Boolean(profileErrors.email)}
-                  className="mt-1.5 h-10 w-full rounded-md border border-input bg-background px-3 text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  className="mt-1.5 h-11 w-full rounded-xl border border-input bg-[#17100B] px-3 text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:h-10 md:rounded-sm"
                 />
                 {profileErrors.email && (
                   <p role="alert" className="mt-1 text-[11px] text-red-400">
@@ -219,7 +232,7 @@ function ProfileContent({ user }: { user: User }) {
                   Nome ENS
                 </label>
                 <div className="mt-1.5 flex">
-                  <span className="inline-flex items-center rounded-l-md border border-r-0 border-input bg-secondary px-3 text-muted-foreground">
+                  <span className="inline-flex items-center rounded-l-xl border border-r-0 border-input bg-secondary px-3 text-muted-foreground md:rounded-l-sm">
                     .eth
                   </span>
                   <input
@@ -227,7 +240,7 @@ function ProfileContent({ user }: { user: User }) {
                     type="text"
                     value={ensName}
                     onChange={(e) => setEnsName(e.target.value)}
-                    className="h-10 min-w-0 flex-1 rounded-r-md border border-input bg-background px-3 text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    className="h-11 min-w-0 flex-1 rounded-r-xl border border-input bg-[#17100B] px-3 text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:h-10 md:rounded-r-sm"
                   />
                 </div>
               </div>
@@ -236,7 +249,7 @@ function ProfileContent({ user }: { user: User }) {
                 <label className="block text-foreground">
                   Carteira principal
                 </label>
-                <p className="mt-2 truncate rounded-md border border-border bg-secondary/40 px-3 py-2.5 text-muted-foreground">
+                <p className="mt-2 truncate rounded-xl border border-border bg-secondary/40 px-3 py-2.5 text-muted-foreground md:rounded-sm">
                   {user.wallets.find((w) => w.isPrimary)?.label ??
                     "Nenhuma carteira definida"}
                 </p>
@@ -261,7 +274,7 @@ function ProfileContent({ user }: { user: User }) {
                     type="button"
                     size="sm"
                     onClick={() => fileInputRef.current?.click()}
-                    className="font-bold"
+                    className="rounded-full font-bold md:rounded-sm"
                   >
                     Alterar
                   </Button>
@@ -279,7 +292,7 @@ function ProfileContent({ user }: { user: User }) {
             <Button
               type="submit"
               disabled={updateProfile.isPending}
-              className="font-bold"
+              className="h-11 w-full rounded-full font-bold sm:w-auto md:h-10 md:rounded-sm"
             >
               {updateProfile.isPending ? "Salvando..." : "Salvar perfil"}
             </Button>
@@ -288,7 +301,7 @@ function ProfileContent({ user }: { user: User }) {
           <form
             onSubmit={handleChangePassword}
             noValidate
-            className="space-y-4 rounded-xl border border-border bg-card/50 p-6 text-xs"
+            className="space-y-4 rounded-2xl bg-card/60 p-5 text-xs md:rounded-none md:border-t md:border-border md:bg-transparent md:px-0 md:pt-8"
           >
             <div className="flex items-center justify-between">
               <h2 className="text-sm font-bold text-foreground">
@@ -322,7 +335,7 @@ function ProfileContent({ user }: { user: User }) {
                   value={currentPassword}
                   onChange={(e) => setCurrentPassword(e.target.value)}
                   aria-invalid={Boolean(passwordErrors.currentPassword)}
-                  className="mt-1.5 h-10 w-full rounded-md border border-input bg-background px-3 text-foreground"
+                  className="mt-1.5 h-11 w-full rounded-xl border border-input bg-[#17100B] px-3 text-foreground md:h-10 md:rounded-sm"
                 />
                 {passwordErrors.currentPassword && (
                   <p role="alert" className="mt-1 text-[11px] text-red-400">
@@ -341,7 +354,7 @@ function ProfileContent({ user }: { user: User }) {
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
                   aria-invalid={Boolean(passwordErrors.newPassword)}
-                  className="mt-1.5 h-10 w-full rounded-md border border-input bg-background px-3 text-foreground"
+                  className="mt-1.5 h-11 w-full rounded-xl border border-input bg-[#17100B] px-3 text-foreground md:h-10 md:rounded-sm"
                 />
                 {passwordErrors.newPassword && (
                   <p role="alert" className="mt-1 text-[11px] text-red-400">
@@ -360,7 +373,7 @@ function ProfileContent({ user }: { user: User }) {
                   value={confirmNewPassword}
                   onChange={(e) => setConfirmNewPassword(e.target.value)}
                   aria-invalid={Boolean(passwordErrors.confirmNewPassword)}
-                  className="mt-1.5 h-10 w-full rounded-md border border-input bg-background px-3 text-foreground"
+                  className="mt-1.5 h-11 w-full rounded-xl border border-input bg-[#17100B] px-3 text-foreground md:h-10 md:rounded-sm"
                 />
                 {passwordErrors.confirmNewPassword && (
                   <p role="alert" className="mt-1 text-[11px] text-red-400">
@@ -372,7 +385,7 @@ function ProfileContent({ user }: { user: User }) {
               <Button
                 type="submit"
                 disabled={changePassword.isPending}
-                className="font-bold"
+                className="h-11 w-full rounded-full font-bold sm:w-auto md:h-10 md:rounded-sm"
               >
                 {changePassword.isPending ? "Atualizando..." : "Salvar senha"}
               </Button>
@@ -381,7 +394,7 @@ function ProfileContent({ user }: { user: User }) {
 
           <section
             id="favoritos"
-            className="rounded-xl border border-border bg-card/50 p-6 text-xs"
+            className="rounded-2xl bg-card/60 p-5 text-xs md:rounded-none md:border-t md:border-border md:bg-transparent md:px-0 md:pt-8"
           >
             <h2 className="text-sm font-bold text-foreground">
               Lista de interesse ({favoriteNfts.length})
@@ -391,18 +404,18 @@ function ProfileContent({ user }: { user: User }) {
                 Você ainda não favoritou nenhum NFT.
               </p>
             ) : (
-              <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
+              <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3 md:gap-4">
                 {favoriteNfts.map((nft) => (
                   <Link
                     key={nft.id}
                     to="/nfts/$nftId"
                     params={{ nftId: nft.id }}
-                    className="flex items-center gap-3 rounded-lg border border-border bg-card p-3 hover:border-primary/50"
+                    className="flex items-center gap-3 rounded-2xl border border-border bg-card p-3 hover:border-primary/50 md:rounded-sm"
                   >
                     <img
                       src={nft.imageUrl}
                       alt={nft.title}
-                      className="size-12 rounded object-cover"
+                      className="size-12 rounded-lg object-cover"
                     />
                     <div>
                       <p className="font-bold text-foreground">{nft.title}</p>
@@ -416,7 +429,7 @@ function ProfileContent({ user }: { user: User }) {
 
           <section
             id="pedidos"
-            className="rounded-xl border border-border bg-card/50 p-6 text-xs"
+            className="rounded-2xl bg-card/60 p-5 text-xs md:rounded-none md:border-t md:border-border md:bg-transparent md:px-0 md:pt-8"
           >
             <h2 className="text-sm font-bold text-foreground">
               Meus pedidos ({orders.length})
@@ -441,7 +454,12 @@ function ProfileContent({ user }: { user: User }) {
                         </span>
                       </p>
                     </div>
-                    <Button asChild size="xs" variant="outline">
+                    <Button
+                      asChild
+                      size="xs"
+                      variant="outline"
+                      className="rounded-full md:rounded-sm"
+                    >
                       <Link
                         to="/orders/$orderId"
                         params={{ orderId: ord.id }}

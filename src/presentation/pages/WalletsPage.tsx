@@ -1,5 +1,12 @@
 import { useState } from "react"
-import { Check, Edit2, Plus, Wallet as WalletIcon } from "lucide-react"
+import { Link } from "@tanstack/react-router"
+import {
+  Check,
+  ChevronLeft,
+  Edit2,
+  Plus,
+  Wallet as WalletIcon,
+} from "lucide-react"
 import type {
   BlockchainNetwork,
   Wallet,
@@ -62,7 +69,8 @@ export function WalletsPage() {
       nextErrors.label = "Informe um apelido com pelo menos 2 caracteres."
     }
     if (address.trim().length < 16) {
-      nextErrors.address = "Informe um endereço de carteira válido (mín. 16 caracteres)."
+      nextErrors.address =
+        "Informe um endereço de carteira válido (mín. 16 caracteres)."
     }
 
     if (Object.keys(nextErrors).length > 0) {
@@ -139,7 +147,21 @@ export function WalletsPage() {
   }
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+    <div className="mx-auto max-w-7xl px-4 pb-10 pt-4 sm:px-6 md:py-8 lg:px-8">
+      {/* Cabeçalho Mobile */}
+      <div className="relative mb-6 flex items-center justify-center md:hidden">
+        <Link
+          to="/profile"
+          aria-label="Voltar ao perfil"
+          className="absolute left-0 flex size-10 items-center justify-center rounded-full bg-card text-primary"
+        >
+          <ChevronLeft className="size-5" />
+        </Link>
+        <span className="text-base font-bold text-foreground">
+          Minhas carteiras
+        </span>
+      </div>
+
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-12">
         <div className="lg:col-span-3">
           <AccountSidebar activeSection="wallets" />
@@ -147,7 +169,7 @@ export function WalletsPage() {
 
         <div className="space-y-8 lg:col-span-9">
           {/* Carteiras Cadastradas */}
-          <section className="rounded-xl border border-border bg-card/50 p-6 text-xs">
+          <section className="text-xs">
             <h1 className="text-base font-bold text-foreground">
               Carteiras conectadas e cadastradas
             </h1>
@@ -160,7 +182,7 @@ export function WalletsPage() {
               {user?.wallets.map((wallet) => (
                 <div
                   key={wallet.id}
-                  className={`flex flex-col justify-between rounded-xl border p-4 ${
+                  className={`flex flex-col justify-between rounded-2xl border p-4 md:rounded-sm ${
                     wallet.isPrimary
                       ? "border-primary bg-primary/5"
                       : "border-border bg-card"
@@ -191,12 +213,13 @@ export function WalletsPage() {
                     </p>
                   </div>
 
-                  <div className="mt-4 flex items-center gap-2 border-t border-border pt-3">
+                  <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-border pt-3">
                     <Button
                       type="button"
                       size="xs"
                       variant="outline"
                       onClick={() => startEdit(wallet)}
+                      className="rounded-full md:rounded-sm"
                     >
                       <Edit2 className="size-3" />
                       <span>Editar</span>
@@ -212,6 +235,7 @@ export function WalletsPage() {
                             isPrimary: true,
                           })
                         }
+                        className="rounded-full md:rounded-sm"
                       >
                         <Check className="size-3" />
                         <span>Definir como principal</span>
@@ -227,7 +251,7 @@ export function WalletsPage() {
           <form
             onSubmit={handleSubmit}
             noValidate
-            className="space-y-4 rounded-xl border border-border bg-card/50 p-6 text-xs"
+            className="space-y-4 rounded-2xl bg-card/60 p-5 text-xs md:rounded-none md:border-t md:border-border md:bg-transparent md:px-0 md:pt-8"
           >
             <div className="flex items-center justify-between">
               <h2 className="text-sm font-bold text-foreground">
@@ -258,7 +282,7 @@ export function WalletsPage() {
                   onChange={(e) => setLabel(e.target.value)}
                   placeholder="Ex: Carteira Secundária"
                   aria-invalid={Boolean(errors.label)}
-                  className="mt-1.5 h-10 w-full rounded-md border border-input bg-background px-3 text-foreground"
+                  className="mt-1.5 h-11 w-full rounded-xl border border-input bg-[#17100B] px-3 text-foreground md:h-10 md:rounded-sm"
                 />
                 {errors.label && (
                   <p role="alert" className="mt-1 text-[11px] text-red-400">
@@ -277,7 +301,7 @@ export function WalletsPage() {
                   onChange={(e) =>
                     setProvider(e.target.value as WalletProvider)
                   }
-                  className="mt-1.5 h-10 w-full rounded-md border border-input bg-background px-3 text-foreground"
+                  className="mt-1.5 h-11 w-full rounded-xl border border-input bg-[#17100B] px-3 text-foreground md:h-10 md:rounded-sm"
                 >
                   {PROVIDERS.map((p) => (
                     <option key={p} value={p}>
@@ -298,7 +322,7 @@ export function WalletsPage() {
                   onChange={(e) => setAddress(e.target.value)}
                   placeholder="0x..."
                   aria-invalid={Boolean(errors.address)}
-                  className="mt-1.5 h-10 w-full rounded-md border border-input bg-background px-3 text-foreground"
+                  className="mt-1.5 h-11 w-full rounded-xl border border-input bg-[#17100B] px-3 text-foreground md:h-10 md:rounded-sm"
                 />
                 {errors.address && (
                   <p role="alert" className="mt-1 text-[11px] text-red-400">
@@ -317,7 +341,7 @@ export function WalletsPage() {
                   onChange={(e) =>
                     setNetwork(e.target.value as BlockchainNetwork)
                   }
-                  className="mt-1.5 h-10 w-full rounded-md border border-input bg-background px-3 text-foreground"
+                  className="mt-1.5 h-11 w-full rounded-xl border border-input bg-[#17100B] px-3 text-foreground md:h-10 md:rounded-sm"
                 >
                   {NETWORKS.map((net) => (
                     <option key={net} value={net}>
@@ -328,7 +352,7 @@ export function WalletsPage() {
               </div>
             </div>
 
-            <label className="flex items-center gap-2 cursor-pointer">
+            <label className="flex cursor-pointer items-center gap-2">
               <input
                 type="checkbox"
                 checked={isPrimary}
@@ -341,7 +365,7 @@ export function WalletsPage() {
             <Button
               type="submit"
               disabled={addWallet.isPending || updateWallet.isPending}
-              className="font-bold"
+              className="h-11 w-full rounded-full font-bold sm:w-auto md:h-10 md:rounded-sm"
             >
               <Plus className="size-4" />
               <span>

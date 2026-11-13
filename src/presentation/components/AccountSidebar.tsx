@@ -43,50 +43,52 @@ export function AccountSidebar({ activeSection }: AccountSidebarProps) {
 
   return (
     <aside
-  aria-label="Menu da conta do colecionador"
-  className="rounded-sm bg-card p-5 text-xs"
->
-  <p className="mb-4 px-3 text-sm font-bold text-foreground">Meu perfil</p>
-  <nav className="flex flex-row gap-1 overflow-x-auto pb-2 lg:flex-col lg:overflow-visible lg:pb-0">
-    <Link
-      to="/profile"
-      className={`flex shrink-0 items-center gap-2.5 px-3 py-2.5 transition-colors ${
-        activeSection === "profile"
-          ? "border-l-2 border-primary font-bold text-primary"
-          : "text-foreground/80 hover:text-primary"
-      }`}
+      aria-label="Menu da conta do colecionador"
+      className="rounded-sm bg-card p-5 text-xs"
     >
-      <UserIcon className="size-4 text-primary" />
-      <span>Dados do perfil</span>
-    </Link>
+      <p className="mb-4 px-3 text-sm font-bold text-foreground">Meu perfil</p>
+      <nav className="flex flex-row gap-1 overflow-x-auto pb-2 lg:flex-col lg:overflow-visible lg:pb-0">
+        <Link
+          to="/profile"
+          className={`flex shrink-0 items-center gap-2.5 px-3 py-2.5 transition-colors ${
+            activeSection === "profile"
+              ? "border-l-2 border-primary font-bold text-primary"
+              : "text-foreground/80 hover:text-primary"
+          }`}
+        >
+          <UserIcon className="size-4 text-primary" />
+          <span>Dados do perfil</span>
+        </Link>
 
-    <Link
-      to="/wallets"
-      className={`flex shrink-0 items-center gap-2.5 px-3 py-2.5 transition-colors ${
-        activeSection === "wallets"
-          ? "border-l-2 border-primary font-bold text-primary"
-          : "text-foreground/80 hover:text-primary"
-      }`}
-    >
-      <MapPin className="size-4 text-primary" />
-      <span>Carteiras</span>
-    </Link>
+        <Link
+          to="/wallets"
+          className={`flex shrink-0 items-center gap-2.5 px-3 py-2.5 transition-colors ${
+            activeSection === "wallets"
+              ? "border-l-2 border-primary font-bold text-primary"
+              : "text-foreground/80 hover:text-primary"
+          }`}
+        >
+          <MapPin className="size-4 text-primary" />
+          <span>Carteiras</span>
+        </Link>
 
-        <a
-          href="/profile#pedidos"
+        <Link
+          to="/profile"
+          hash="pedidos"
           className="flex shrink-0 items-center gap-2.5 rounded-md px-3 py-2.5 text-muted-foreground hover:bg-muted hover:text-foreground"
         >
           <Receipt className="size-4" />
           <span>Meus pedidos</span>
-        </a>
+        </Link>
 
-        <a
-          href="/profile#favoritos"
+        <Link
+          to="/profile"
+          hash="favoritos"
           className="flex shrink-0 items-center gap-2.5 rounded-md px-3 py-2.5 text-muted-foreground hover:bg-muted hover:text-foreground"
         >
           <Heart className="size-4" />
           <span>Lista de interesse</span>
-        </a>
+        </Link>
 
         <button
           type="button"

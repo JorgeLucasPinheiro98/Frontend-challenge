@@ -136,16 +136,37 @@ function getAuthenticatedUser(request: Request): StoredUser | null {
   if (!authHeader?.startsWith("Bearer ")) return null
 
   const token = authHeader.slice(7).trim()
-  const session = db.sessions[token]
-  if (!session) return null
-
-  if (db.scenario === "session-expired" || session.expiresAt < Date.now()) {
+  if (db.scenario === "session-expired") {
     delete db.sessions[token]
     saveDb()
     return null
   }
 
-  return db.users.find((u) => u.id === session.userId) ?? null
+  const session = db.sessions[token]
+  if (session) {
+    if (session.expiresAt < Date.now()) {
+      delete db.sessions[token]
+      saveDb()
+      return null
+    }
+    return db.users.find((u) => u.id === session.userId) ?? null
+  }
+
+  // Fallback resiliente caso o Service Worker reinicie em memória com token válido
+  const match = /^tok_(usr-[^_]+)_/.exec(token)
+  if (match) {
+    const recoveredUser = db.users.find((u) => u.id === match[1])
+    if (recoveredUser) {
+      db.sessions[token] = {
+        token,
+        userId: recoveredUser.id,
+        expiresAt: Date.now() + 1000 * 60 * 60 * 2,
+      }
+      return recoveredUser
+    }
+  }
+
+  return null
 }
 
 function getCartOwnerKey(user: StoredUser | null): string {
@@ -353,7 +374,7 @@ export const handlers = [
     db.favoritesByUser[newUser.id] = []
     db.cartsByOwner[newUser.id] = { items: [] }
 
-    const token = `tok_${crypto.randomUUID()}`
+    const token = `tok_${newUser.id}_${crypto.randomUUID()}`
     db.sessions[token] = {
       token,
       userId: newUser.id,
@@ -391,7 +412,7 @@ export const handlers = [
       db.scenario = "default"
     }
 
-    const token = `tok_${crypto.randomUUID()}`
+    const token = `tok_${user.id}_${crypto.randomUUID()}`
     db.sessions[token] = {
       token,
       userId: user.id,
@@ -923,24 +944,18 @@ export const handlers = [
       payloadSignature,
       orderId: order.id,
     }
-    saveDb()
 
     const isRejectedScenario = db.scenario === "payment-rejected"
-    setTimeout(() => {
-      const latestDb = getDb()
-      if (isRejectedScenario) {
-        mutateOrderAndBroadcast(order.id, {
-          status: "rejected",
-          rejectionReason: "Transação recusada pelo nó da rede selecionada.",
-        })
-        return
-      }
 
+    if (!isRejectedScenario) {
       for (const purchased of order.items) {
-        const nft = latestDb.nfts.find((n) => n.id === purchased.nftId)
+        const nft = db.nfts.find((n) => n.id === purchased.nftId)
         if (nft) {
           mutateNftAndBroadcast(nft.id, {
-            availableQuantity: Math.max(0, nft.availableQuantity - purchased.quantity),
+            availableQuantity: Math.max(
+              0,
+              nft.availableQuantity - purchased.quantity
+            ),
           })
         }
       }
@@ -955,7 +970,20 @@ export const handlers = [
         })
         .filter((entry): entry is CartItem => entry !== null)
       userCart.couponCode = undefined
-      saveDb()
+    }
+
+    saveDb()
+
+    saveDb()
+
+    setTimeout(() => {
+      if (isRejectedScenario) {
+        mutateOrderAndBroadcast(order.id, {
+          status: "rejected",
+          rejectionReason: "Transação recusada pelo nó da rede selecionada.",
+        })
+        return
+      }
 
       const txHash = `0x${crypto.randomUUID().replace(/-/g, "")}${crypto
         .randomUUID()
@@ -967,7 +995,7 @@ export const handlers = [
         transactionHash: txHash,
         explorerUrl: `https://etherscan.io/tx/${txHash}`,
       })
-    }, 1100)
+    }, 900)
 
     if (db.scenario === "order-timeout-recovery") {
       db.scenario = "default"
@@ -1013,6 +1041,29 @@ export const handlers = [
     )
     if (!order) {
       return apiError(404, "NOT_FOUND", "Pedido não encontrado.")
+    }
+
+    // Se o pedido ainda estiver pendente após 1.2s (ex: SW suspenso), liquida agora
+    if (
+      order.status === "pending" &&
+      Date.now() - new Date(order.createdAt).getTime() >= 1200
+    ) {
+      if (db.scenario === "payment-rejected") {
+        mutateOrderAndBroadcast(order.id, {
+          status: "rejected",
+          rejectionReason: "Transação recusada pelo nó da rede selecionada.",
+        })
+      } else {
+        const txHash = `0x${crypto.randomUUID().replace(/-/g, "")}${crypto
+          .randomUUID()
+          .replace(/-/g, "")
+          .slice(0, 32)}`
+        mutateOrderAndBroadcast(order.id, {
+          status: "confirmed",
+          transactionHash: txHash,
+          explorerUrl: `https://etherscan.io/tx/${txHash}`,
+        })
+      }
     }
 
     return json(order)

@@ -28,15 +28,33 @@ export function initRealtimeSync(queryClient: QueryClient): () => void {
     return () => {}
   }
 
+  // Em preview/produção sem servidor Socket.IO real, evita tentativas infinitas de WebSocket
+  const isPreviewWithoutBackend =
+    typeof window !== "undefined" &&
+    window.location.port === "4173" &&
+    import.meta.env.VITE_ENABLE_SOCKET !== "true"
+
+  if (isPreviewWithoutBackend) {
+    return () => {}
+  }
+
   const socket = io("/", {
     path: "/socket.io/",
     transports: ["websocket"],
     reconnection: true,
+    reconnectionAttempts: 2,
     reconnectionDelay: 500,
-    reconnectionDelayMax: 3000,
+    reconnectionDelayMax: 2000,
   })
 
   socketInstance = socket
+
+  socket.on("connect_error", () => {
+    // Se não houver servidor WS ativo após as tentativas iniciais, encerra silenciosamente
+    if (!hasConnectedOnce && socket.io.reconnectionAttempts() <= 2) {
+      socket.disconnect()
+    }
+  })
 
   socket.on("connect", () => {
     if (hasConnectedOnce) {
@@ -135,6 +153,7 @@ export function initRealtimeSync(queryClient: QueryClient): () => void {
     if (event.status === "confirmed") {
       void queryClient.invalidateQueries({ queryKey: ["cart"] })
       void queryClient.invalidateQueries({ queryKey: ["nfts"] })
+      void queryClient.invalidateQueries({ queryKey: ["nft"] })
     }
   })
 

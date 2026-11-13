@@ -1,6 +1,7 @@
 import { Link, useParams } from "@tanstack/react-router"
 import {
   CheckCircle2,
+  ChevronLeft,
   ExternalLink,
   Loader2,
   MailCheck,
@@ -36,7 +37,7 @@ export function OrderConfirmationPage() {
         <p className="mt-2 text-muted-foreground">
           Não foi possível localizar o recibo solicitado.
         </p>
-        <Button asChild className="mt-6 font-bold">
+        <Button asChild className="mt-6 rounded-full font-bold md:rounded-sm">
           <Link to="/" search={{}}>
             Voltar ao início
           </Link>
@@ -57,13 +58,28 @@ export function OrderConfirmationPage() {
     : "Aguardando hash"
 
   return (
-    <div className="mx-auto max-w-2xl px-4 py-10 sm:px-6">
-      <div className="relative overflow-hidden rounded-2xl border-b-4 border-primary bg-card p-6 shadow-2xl sm:p-8">
+    <div className="mx-auto max-w-2xl px-4 pb-10 pt-4 sm:px-6 md:py-10">
+      {/* Cabeçalho mobile */}
+      <div className="relative mb-5 flex items-center justify-center md:hidden">
+        <Link
+          to="/"
+          search={{}}
+          aria-label="Voltar ao início"
+          className="absolute left-0 flex size-10 items-center justify-center rounded-full bg-card text-primary"
+        >
+          <ChevronLeft className="size-5" />
+        </Link>
+        <span className="text-base font-bold text-foreground">
+          Recibo da compra
+        </span>
+      </div>
+
+      <div className="relative overflow-hidden rounded-2xl border-b-4 border-primary bg-card p-5 shadow-2xl sm:p-8 md:rounded-sm">
         <Link
           to="/"
           search={{}}
           aria-label="Fechar recibo e voltar ao catálogo"
-          className="absolute right-5 top-5 rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+          className="absolute right-5 top-5 hidden rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground md:block"
         >
           <X className="size-4" />
         </Link>
@@ -93,7 +109,7 @@ export function OrderConfirmationPage() {
                 "Não foi possível liquidar a transação. Seus itens permanecem salvos no carrinho."}
             </p>
             <div className="mt-6 flex justify-center gap-3">
-              <Button asChild className="font-bold">
+              <Button asChild className="h-11 rounded-full font-bold md:h-10 md:rounded-sm">
                 <Link to="/checkout">Tentar novamente no checkout</Link>
               </Button>
             </div>
@@ -152,20 +168,22 @@ export function OrderConfirmationPage() {
                 key={item.nftId}
                 className="flex items-center justify-between gap-3 py-3.5"
               >
-                <div className="flex items-center gap-3">
+                <div className="flex min-w-0 items-center gap-3">
                   <img
                     src={item.imageUrl}
                     alt={item.title}
-                    className="size-12 rounded-lg object-cover"
+                    className="size-12 shrink-0 rounded-lg object-cover"
                   />
-                  <div>
-                    <p className="font-bold text-foreground">{item.title}</p>
+                  <div className="min-w-0">
+                    <p className="truncate font-bold text-foreground">
+                      {item.title}
+                    </p>
                     <p className="text-[11px] text-muted-foreground">
                       ID do token: #{item.nftId.replace("nft-", "")}
                     </p>
                   </div>
                 </div>
-                <div className="flex items-center gap-6">
+                <div className="flex shrink-0 items-center gap-3 sm:gap-6">
                   <span className="text-muted-foreground">
                     (x {item.quantity})
                   </span>
@@ -199,10 +217,11 @@ export function OrderConfirmationPage() {
           <div className="mt-6 border-t border-border pt-6 text-center text-xs">
             <p className="mx-auto max-w-md leading-relaxed text-muted-foreground">
               Transação confirmada na {order.network}. A propriedade foi
-              transferida para sua carteira conectada ({order.walletAddress.slice(0, 6)}...
+              transferida para sua carteira conectada (
+              {order.walletAddress.slice(0, 6)}...
               {order.walletAddress.slice(-4)}) e registrada na rede.
             </p>
-            <div className="mt-5 flex flex-wrap justify-center gap-3">
+            <div className="mt-5 flex flex-col justify-center gap-3 sm:flex-row">
               <Button
                 type="button"
                 onClick={() =>
@@ -212,13 +231,17 @@ export function OrderConfirmationPage() {
                     description: `Hash ${order.transactionHash} verificado na ${order.network}.`,
                   })
                 }
-                className="font-bold"
+                className="h-11 rounded-full font-bold md:h-10 md:rounded-sm"
               >
                 <CheckCircle2 className="size-4" />
                 <span>Ver no Etherscan</span>
                 <ExternalLink className="size-3.5" />
               </Button>
-              <Button asChild variant="outline">
+              <Button
+                asChild
+                variant="outline"
+                className="h-11 rounded-full md:h-10 md:rounded-sm"
+              >
                 <Link to="/" search={{}}>
                   Continuar explorando
                 </Link>

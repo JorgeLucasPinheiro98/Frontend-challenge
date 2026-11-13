@@ -41,7 +41,7 @@ export function Header() {
   }
 
   return (
-    <header className="sticky top-0 z-40 bg-black backdrop-blur hidden md:block">
+    <header className="sticky top-0 z-40 hidden bg-black backdrop-blur md:block">
       <div className="mx-auto flex h-20 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
         <Link
           to="/"
@@ -66,8 +66,10 @@ export function Header() {
           >
             Início
           </Link>
-          <a
-            href="/#catalogo"
+          <Link
+            to="/"
+            search={{}}
+            hash="catalogo"
             className={`pb-1.5 transition-colors ${
               pathname.startsWith("/nfts") ||
               pathname === "/cart" ||
@@ -77,19 +79,23 @@ export function Header() {
             }`}
           >
             Mercado
-          </a>
-          <a
-            href="/#catalogo"
+          </Link>
+          <Link
+            to="/"
+            search={{}}
+            hash="catalogo"
             className="pb-1.5 text-foreground transition-colors hover:text-primary"
           >
             Criadores
-          </a>
-          <a
-            href="/#diario-cunhagem"
+          </Link>
+          <Link
+            to="/"
+            search={{}}
+            hash="diario-cunhagem"
             className="pb-1.5 text-foreground transition-colors hover:text-primary"
           >
             Aprenda
-          </a>
+          </Link>
         </nav>
 
         <div className="flex items-center gap-4">

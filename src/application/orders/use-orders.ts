@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import type { BlockchainNetwork, Order } from "@/domain/types"
 import { apiClient, getStoredToken } from "@/infrastructure/http/client"
@@ -16,21 +17,54 @@ export function useOrders() {
 }
 
 export function useOrderDetail(orderId: string) {
-  const token = getStoredToken()
+  const queryClient = useQueryClient()
+  const syncedConfirmedRef = useRef<string | null>(null)
 
-  return useQuery({
+  const query = useQuery({
     queryKey: ["order", orderId],
-    enabled: Boolean(token && orderId),
+    enabled: Boolean(orderId),
+    retry: (failureCount, error) => {
+      if (
+        error &&
+        "status" in error &&
+        (error.status === 404 || error.status === 401)
+      ) {
+        return false
+      }
+      return failureCount < 2
+    },
     queryFn: async ({ signal }) => {
+      const token = getStoredToken()
+      if (!token) {
+        throw Object.assign(new Error("Sessão não encontrada."), {
+          status: 401,
+        })
+      }
       const { data } = await apiClient.get<Order>(`/orders/${orderId}`, {
         signal,
       })
       return data
     },
     // Polling de segurança apenas enquanto o pedido estiver pendente
-    refetchInterval: (query) =>
-      query.state.data?.status === "pending" ? 2000 : false,
+    refetchInterval: (q) =>
+      q.state.data?.status === "pending" ? 1000 : false,
   })
+
+  // Assim que o pedido confirmar (via polling ou Socket.IO), sincroniza estoque e carrinho
+  useEffect(() => {
+    const order = query.data
+    if (
+      order?.status === "confirmed" &&
+      syncedConfirmedRef.current !== order.id
+    ) {
+      syncedConfirmedRef.current = order.id
+      void queryClient.invalidateQueries({ queryKey: ["nfts"] })
+      void queryClient.invalidateQueries({ queryKey: ["cart"] })
+      void queryClient.invalidateQueries({ queryKey: ["orders"] })
+    }
+  }, [query.data, queryClient])
+
+  return query
 }
 
 export function useCreateOrder() {
@@ -64,6 +98,8 @@ export function useCreateOrder() {
     onSuccess: (order) => {
       queryClient.setQueryData<Order>(["order", order.id], order)
       void queryClient.invalidateQueries({ queryKey: ["orders"] })
+      void queryClient.invalidateQueries({ queryKey: ["nfts"] })
+      void queryClient.invalidateQueries({ queryKey: ["cart"] })
     },
   })
 }
