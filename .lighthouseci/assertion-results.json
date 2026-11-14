@@ -1,1 +1,30 @@
-[]
+[
+  {
+    "name": "minScore",
+    "expected": 0.9,
+    "actual": 0.81,
+    "values": [
+      0.81
+    ],
+    "operator": ">=",
+    "passed": false,
+    "auditProperty": "performance",
+    "auditId": "categories",
+    "level": "error",
+    "url": "http://127.0.0.1:4173/"
+  },
+  {
+    "name": "minScore",
+    "expected": 0.9,
+    "actual": 0.72,
+    "values": [
+      0.72
+    ],
+    "operator": ">=",
+    "passed": false,
+    "auditProperty": "performance",
+    "auditId": "categories",
+    "level": "error",
+    "url": "http://127.0.0.1:4173/nfts/nft-042"
+  }
+]

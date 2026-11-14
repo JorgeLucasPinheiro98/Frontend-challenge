@@ -1,6 +1,5 @@
 import { useEffect } from "react"
 import { Link, Outlet, useNavigate } from "@tanstack/react-router"
-import { initRealtimeSync } from "@/infrastructure/realtime/socket"
 import { queryClient } from "@/application/query-client"
 import { Button } from "@/components/ui/button"
 import { notifyToast } from "@/lib/toast"
@@ -14,8 +13,21 @@ export function RootLayout() {
   const navigate = useNavigate()
 
   useEffect(() => {
-    const cleanup = initRealtimeSync(queryClient)
-    return cleanup
+    let cleanup: (() => void) | undefined
+    let cancelled = false
+
+    void import("@/infrastructure/realtime/socket").then(
+      ({ initRealtimeSync }) => {
+        if (!cancelled) {
+          cleanup = initRealtimeSync(queryClient)
+        }
+      }
+    )
+
+    return () => {
+      cancelled = true
+      cleanup?.()
+    }
   }, [])
 
   useEffect(() => {

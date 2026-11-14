@@ -2,6 +2,7 @@ import {
     createRootRoute,
     createRoute,
     createRouter,
+    lazyRouteComponent,
     redirect,
   } from "@tanstack/react-router"
   import type {
@@ -11,14 +12,6 @@ import {
   } from "@/domain/types"
   import { getStoredToken } from "@/infrastructure/http/client"
   import { NotFoundPage, RootLayout } from "./components/RootLayout"
-  import { HomePage } from "./pages/HomePage"
-  import { NFTDetailPage } from "./pages/NFTDetailPage"
-  import { CartPage } from "./pages/CartPage"
-  import { CheckoutPage } from "./pages/CheckoutPage"
-  import { OrderConfirmationPage } from "./pages/OrderConfirmationPage"
-  import { LoginPage, RegisterPage } from "./pages/AuthPage"
-  import { ProfilePage } from "./pages/ProfilePage"
-  import { WalletsPage } from "./pages/WalletsPage"
   
   const rootRoute = createRootRoute({
     component: RootLayout,
@@ -58,19 +51,22 @@ import {
           : undefined,
       page: Number(search.page) > 1 ? Number(search.page) : undefined,
     }),
-    component: HomePage,
+    component: lazyRouteComponent(() => import("./pages/HomePage"), "HomePage"),
   })
   
   const nftDetailRoute = createRoute({
     getParentRoute: () => rootRoute,
     path: "/nfts/$nftId",
-    component: NFTDetailPage,
+    component: lazyRouteComponent(
+      () => import("./pages/NFTDetailPage"),
+      "NFTDetailPage"
+    ),
   })
   
   const cartRoute = createRoute({
     getParentRoute: () => rootRoute,
     path: "/cart",
-    component: CartPage,
+    component: lazyRouteComponent(() => import("./pages/CartPage"), "CartPage"),
   })
   
   const requireAuth = ({ location }: { location: { href: string } }) => {
@@ -86,14 +82,20 @@ import {
     getParentRoute: () => rootRoute,
     path: "/checkout",
     beforeLoad: requireAuth,
-    component: CheckoutPage,
+    component: lazyRouteComponent(
+      () => import("./pages/CheckoutPage"),
+      "CheckoutPage"
+    ),
   })
   
   const orderConfirmationRoute = createRoute({
     getParentRoute: () => rootRoute,
     path: "/orders/$orderId",
     beforeLoad: requireAuth,
-    component: OrderConfirmationPage,
+    component: lazyRouteComponent(
+      () => import("./pages/OrderConfirmationPage"),
+      "OrderConfirmationPage"
+    ),
   })
   
   const loginRoute = createRoute({
@@ -102,7 +104,10 @@ import {
     validateSearch: (search: Record<string, unknown>) => ({
       redirect: typeof search.redirect === "string" ? search.redirect : undefined,
     }),
-    component: LoginPage,
+    component: lazyRouteComponent(
+      () => import("./pages/AuthPage"),
+      "LoginPage"
+    ),
   })
   
   const registerRoute = createRoute({
@@ -111,21 +116,30 @@ import {
     validateSearch: (search: Record<string, unknown>) => ({
       redirect: typeof search.redirect === "string" ? search.redirect : undefined,
     }),
-    component: RegisterPage,
+    component: lazyRouteComponent(
+      () => import("./pages/AuthPage"),
+      "RegisterPage"
+    ),
   })
   
   const profileRoute = createRoute({
     getParentRoute: () => rootRoute,
     path: "/profile",
     beforeLoad: requireAuth,
-    component: ProfilePage,
+    component: lazyRouteComponent(
+      () => import("./pages/ProfilePage"),
+      "ProfilePage"
+    ),
   })
   
   const walletsRoute = createRoute({
     getParentRoute: () => rootRoute,
     path: "/wallets",
     beforeLoad: requireAuth,
-    component: WalletsPage,
+    component: lazyRouteComponent(
+      () => import("./pages/WalletsPage"),
+      "WalletsPage"
+    ),
   })
   
   const routeTree = rootRoute.addChildren([

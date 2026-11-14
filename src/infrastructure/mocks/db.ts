@@ -61,6 +61,10 @@ export function registerSocketBroadcaster(instance: SocketBroadcaster) {
   broadcaster = instance
 }
 
+export function broadcastNftEvent(event: NftUpdatedEvent) {
+  broadcaster?.emitNftUpdated(event)
+}
+
 function createInitialState(): MockDatabaseState {
   return {
     users: structuredClone(INITIAL_USERS),
@@ -134,7 +138,8 @@ export function setMockScenario(scenario: MockScenario, latencyMs?: number) {
 
 export function mutateNftAndBroadcast(
   nftId: string,
-  changes: { priceEth?: string; availableQuantity?: number }
+  changes: { priceEth?: string; availableQuantity?: number },
+  eventId: string = crypto.randomUUID()
 ): NftUpdatedEvent | null {
   const nft = state.nfts.find((item) => item.id === nftId)
   if (!nft) return null
@@ -149,14 +154,14 @@ export function mutateNftAndBroadcast(
   saveDb()
 
   const event: NftUpdatedEvent = {
-    eventId: crypto.randomUUID(),
+    eventId,
     nftId: nft.id,
     version: nft.version,
     timestamp: new Date().toISOString(),
     changes,
   }
 
-  broadcaster?.emitNftUpdated(event)
+  broadcastNftEvent(event)
   return event
 }
 

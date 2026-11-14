@@ -1,5 +1,16 @@
 import { expect, type Page } from "@playwright/test"
 
+export async function gotoApp(page: Page, path: string) {
+  await page.goto(path, { waitUntil: "commit" })
+}
+
+export async function navigateSpa(page: Page, path: string) {
+  await page.evaluate((targetPath) => {
+    window.history.pushState({}, "", targetPath)
+    window.dispatchEvent(new PopStateEvent("popstate"))
+  }, path)
+}
+
 export async function resetMockEnvironment(
   page: Page,
   scenario:
@@ -30,19 +41,13 @@ export async function resetMockEnvironment(
   )
 }
 
-export async function loginAsDemoCollector(page: Page) {
-  await page.goto("/login")
-
-  const demoFillBtn = page.getByRole("button", {
-    name: /demonstração|demo|preencher/i,
-  })
-  if (await demoFillBtn.isVisible()) {
-    await demoFillBtn.click()
-  } else {
-    await page.getByLabel("E-mail", { exact: true }).fill("lucas@kurio.art")
-    await page.getByLabel("Senha", { exact: true }).fill("Kurio@2026")
-  }
-
+export async function loginAsDemoCollector(
+  page: Page,
+  credentials = { email: "lucas@kurio.art", password: "Kurio@2026" }
+) {
+  await navigateSpa(page, "/login")
+  await page.getByLabel("E-mail", { exact: true }).fill(credentials.email)
+  await page.getByLabel("Senha", { exact: true }).fill(credentials.password)
   await page.locator('main form button[type="submit"]').click()
   await expect(page).not.toHaveURL(/\/login/)
 }

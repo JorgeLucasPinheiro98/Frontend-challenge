@@ -33,6 +33,15 @@ const PROVIDERS: WalletProvider[] = [
 
 type WalletConnectionState = "connected" | "disconnected" | "rejected"
 
+type OrderSubmission = {
+  idempotencyKey: string
+  walletId: string
+  network: BlockchainNetwork
+  expectedTotalEth: string
+  collectorNote?: string
+  cartItems: Array<{ nftId: string; quantity: number }>
+}
+
 export function CheckoutPage() {
   const { data: user, isLoading } = useSession()
 
@@ -87,6 +96,7 @@ function CheckoutContent({ user }: { user: User }) {
 
   const submitLockRef = useRef(false)
   const idempotencyKeyRef = useRef<string | null>(null)
+  const pendingRecoveryRef = useRef<OrderSubmission | null>(null)
 
   const getOrCreateIdempotencyKey = () => {
     if (!idempotencyKeyRef.current) {
@@ -97,6 +107,7 @@ function CheckoutContent({ user }: { user: User }) {
 
   const resetIdempotencyKey = () => {
     idempotencyKeyRef.current = crypto.randomUUID()
+    pendingRecoveryRef.current = null
     setTimeoutPendingRecovery(false)
   }
 
@@ -138,10 +149,64 @@ function CheckoutContent({ user }: { user: User }) {
     return Object.keys(errors).length === 0
   }
 
+  const submitOrder = (payload: OrderSubmission) => {
+    submitLockRef.current = true
+    createOrder.mutate(
+      payload,
+      {
+        onSuccess: (order) => {
+          submitLockRef.current = false
+          pendingRecoveryRef.current = null
+          void navigate({
+            to: "/orders/$orderId",
+            params: { orderId: order.id },
+          })
+        },
+        onError: (err) => {
+          submitLockRef.current = false
+          if (err instanceof HttpApiError) {
+            if (err.code === "PRICE_CHANGED" || err.code === "OUT_OF_STOCK") {
+              void cartQuery.refetch()
+              notifyToast({
+                type: "error",
+                title: "Cotação atualizada",
+                description: err.message,
+              })
+              return
+            }
+            if (
+              err.code === "SERVICE_UNAVAILABLE" &&
+              err.message.includes("tempo limite")
+            ) {
+              setTimeoutPendingRecovery(true)
+              notifyToast({
+                type: "info",
+                title: "Tempo limite atingido",
+                description:
+                  "Clique em 'Recuperar / Reenviar pedido' para consultar a mesma chave de idempotência sem duplicar a compra.",
+              })
+              return
+            }
+          }
+          notifyToast({
+            type: "error",
+            title: "Falha ao enviar pedido",
+            description: err.message,
+          })
+        },
+      }
+    )
+  }
+
   const handleConfirmPurchase = (e: React.FormEvent) => {
     e.preventDefault()
 
     if (submitLockRef.current || createOrder.isPending) {
+      return
+    }
+
+    if (timeoutPendingRecovery && pendingRecoveryRef.current) {
+      submitOrder(pendingRecoveryRef.current)
       return
     }
 
@@ -188,59 +253,20 @@ function CheckoutContent({ user }: { user: User }) {
       return
     }
 
-    submitLockRef.current = true
+    const payload: OrderSubmission = {
+      idempotencyKey: getOrCreateIdempotencyKey(),
+      walletId: activeWallet.id,
+      network: selectedNetwork,
+      expectedTotalEth: quote.totalEth,
+      collectorNote,
+      cartItems: quote.items.map(({ nftId, quantity }) => ({
+        nftId,
+        quantity,
+      })),
+    }
+    pendingRecoveryRef.current = payload
     setTimeoutPendingRecovery(false)
-
-    createOrder.mutate(
-      {
-        idempotencyKey: getOrCreateIdempotencyKey(),
-        walletId: activeWallet.id,
-        network: selectedNetwork,
-        expectedTotalEth: quote.totalEth,
-        collectorNote,
-      },
-      {
-        onSuccess: (order) => {
-          submitLockRef.current = false
-          void navigate({
-            to: "/orders/$orderId",
-            params: { orderId: order.id },
-          })
-        },
-        onError: (err) => {
-          submitLockRef.current = false
-          if (err instanceof HttpApiError) {
-            if (err.code === "PRICE_CHANGED" || err.code === "OUT_OF_STOCK") {
-              void cartQuery.refetch()
-              notifyToast({
-                type: "error",
-                title: "Cotação atualizada",
-                description: err.message,
-              })
-              return
-            }
-            if (
-              err.code === "SERVICE_UNAVAILABLE" &&
-              err.message.includes("tempo limite")
-            ) {
-              setTimeoutPendingRecovery(true)
-              notifyToast({
-                type: "info",
-                title: "Tempo limite atingido",
-                description:
-                  "Clique em 'Recuperar / Reenviar pedido' para consultar a mesma chave de idempotência sem duplicar a compra.",
-              })
-              return
-            }
-          }
-          notifyToast({
-            type: "error",
-            title: "Falha ao enviar pedido",
-            description: err.message,
-          })
-        },
-      }
-    )
+    submitOrder(payload)
   }
 
   const latestPendingOrder = orders.find((o) => o.status === "pending")
@@ -598,11 +624,22 @@ function CheckoutContent({ user }: { user: User }) {
                   <p className="text-muted-foreground">
                     Nenhum item selecionado para compra.
                   </p>
-                  <Button asChild size="sm" className="mt-4">
-                    <Link to="/" search={{}}>
-                      Voltar ao catálogo
-                    </Link>
-                  </Button>
+                  {timeoutPendingRecovery ? (
+                    <Button
+                      type="submit"
+                      size="sm"
+                      disabled={createOrder.isPending}
+                      className="mt-4 font-bold"
+                    >
+                      Recuperar / Reenviar pedido
+                    </Button>
+                  ) : (
+                    <Button asChild size="sm" className="mt-4">
+                      <Link to="/" search={{}}>
+                        Voltar ao catálogo
+                      </Link>
+                    </Button>
+                  )}
                 </div>
               ) : (
                 <>

@@ -1,0 +1,80 @@
+[
+  {
+    "url": "http://127.0.0.1:4173/",
+    "isRepresentativeRun": false,
+    "htmlPath": "C:\\Users\\jorge\\Documents\\GitHub\\kurio-marketplace\\.lighthouseci\\desktop\\127_0_0_1--2026_11_14_12_06_25.report.html",
+    "jsonPath": "C:\\Users\\jorge\\Documents\\GitHub\\kurio-marketplace\\.lighthouseci\\desktop\\127_0_0_1--2026_11_14_12_06_25.report.json",
+    "summary": {
+      "performance": 0.99,
+      "accessibility": 1,
+      "best-practices": 0.96,
+      "seo": 0.92,
+      "agentic-browsing": 0.5
+    }
+  },
+  {
+    "url": "http://127.0.0.1:4173/",
+    "isRepresentativeRun": false,
+    "htmlPath": "C:\\Users\\jorge\\Documents\\GitHub\\kurio-marketplace\\.lighthouseci\\desktop\\127_0_0_1--2026_11_14_12_06_39.report.html",
+    "jsonPath": "C:\\Users\\jorge\\Documents\\GitHub\\kurio-marketplace\\.lighthouseci\\desktop\\127_0_0_1--2026_11_14_12_06_39.report.json",
+    "summary": {
+      "performance": 0.99,
+      "accessibility": 1,
+      "best-practices": 0.96,
+      "seo": 0.92,
+      "agentic-browsing": 0.5
+    }
+  },
+  {
+    "url": "http://127.0.0.1:4173/nfts/nft-042",
+    "isRepresentativeRun": false,
+    "htmlPath": "C:\\Users\\jorge\\Documents\\GitHub\\kurio-marketplace\\.lighthouseci\\desktop\\127_0_0_1-nfts_nft_042-2026_11_14_12_06_54.report.html",
+    "jsonPath": "C:\\Users\\jorge\\Documents\\GitHub\\kurio-marketplace\\.lighthouseci\\desktop\\127_0_0_1-nfts_nft_042-2026_11_14_12_06_54.report.json",
+    "summary": {
+      "performance": 0.99,
+      "accessibility": 1,
+      "best-practices": 0.96,
+      "seo": 0.92,
+      "agentic-browsing": 0.5
+    }
+  },
+  {
+    "url": "http://127.0.0.1:4173/nfts/nft-042",
+    "isRepresentativeRun": false,
+    "htmlPath": "C:\\Users\\jorge\\Documents\\GitHub\\kurio-marketplace\\.lighthouseci\\desktop\\127_0_0_1-nfts_nft_042-2026_11_14_12_07_22.report.html",
+    "jsonPath": "C:\\Users\\jorge\\Documents\\GitHub\\kurio-marketplace\\.lighthouseci\\desktop\\127_0_0_1-nfts_nft_042-2026_11_14_12_07_22.report.json",
+    "summary": {
+      "performance": 0.98,
+      "accessibility": 1,
+      "best-practices": 0.96,
+      "seo": 0.92,
+      "agentic-browsing": 0.5
+    }
+  },
+  {
+    "url": "http://127.0.0.1:4173/",
+    "isRepresentativeRun": true,
+    "htmlPath": "C:\\Users\\jorge\\Documents\\GitHub\\kurio-marketplace\\.lighthouseci\\desktop\\127_0_0_1--2026_11_14_12_06_09.report.html",
+    "jsonPath": "C:\\Users\\jorge\\Documents\\GitHub\\kurio-marketplace\\.lighthouseci\\desktop\\127_0_0_1--2026_11_14_12_06_09.report.json",
+    "summary": {
+      "performance": 0.99,
+      "accessibility": 1,
+      "best-practices": 0.96,
+      "seo": 0.92,
+      "agentic-browsing": 0.5
+    }
+  },
+  {
+    "url": "http://127.0.0.1:4173/nfts/nft-042",
+    "isRepresentativeRun": true,
+    "htmlPath": "C:\\Users\\jorge\\Documents\\GitHub\\kurio-marketplace\\.lighthouseci\\desktop\\127_0_0_1-nfts_nft_042-2026_11_14_12_07_08.report.html",
+    "jsonPath": "C:\\Users\\jorge\\Documents\\GitHub\\kurio-marketplace\\.lighthouseci\\desktop\\127_0_0_1-nfts_nft_042-2026_11_14_12_07_08.report.json",
+    "summary": {
+      "performance": 0.99,
+      "accessibility": 1,
+      "best-practices": 0.96,
+      "seo": 0.92,
+      "agentic-browsing": 0.5
+    }
+  }
+]

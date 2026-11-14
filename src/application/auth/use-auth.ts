@@ -5,10 +5,6 @@ import {
   getStoredToken,
   setStoredToken,
 } from "@/infrastructure/http/client"
-import {
-  reconnectRealtimeForSession,
-  setRealtimeUserId,
-} from "@/infrastructure/realtime/socket"
 
 export function useSession() {
   const token = getStoredToken()
@@ -20,7 +16,9 @@ export function useSession() {
       const { data } = await apiClient.get<{ user: User }>("/auth/session", {
         signal,
       })
-      setRealtimeUserId(data.user.id)
+      void import("@/infrastructure/realtime/socket").then(
+        ({ setRealtimeUserId }) => setRealtimeUserId(data.user.id)
+      )
       return data.user
     },
     staleTime: 1000 * 60 * 2,
@@ -44,7 +42,10 @@ export function useLogin() {
       queryClient.removeQueries({ queryKey: ["orders"] })
       queryClient.removeQueries({ queryKey: ["order"] })
       queryClient.setQueryData(["session"], user)
-      reconnectRealtimeForSession(user.id)
+      void import("@/infrastructure/realtime/socket").then(
+        ({ reconnectRealtimeForSession }) =>
+          reconnectRealtimeForSession(user.id)
+      )
       void queryClient.invalidateQueries({ queryKey: ["cart"] })
       void queryClient.invalidateQueries({ queryKey: ["favorites"] })
     },
@@ -69,7 +70,10 @@ export function useRegister() {
     onSuccess: ({ token, user }) => {
       setStoredToken(token)
       queryClient.setQueryData(["session"], user)
-      reconnectRealtimeForSession(user.id)
+      void import("@/infrastructure/realtime/socket").then(
+        ({ reconnectRealtimeForSession }) =>
+          reconnectRealtimeForSession(user.id)
+      )
       void queryClient.invalidateQueries({ queryKey: ["cart"] })
       void queryClient.invalidateQueries({ queryKey: ["favorites"] })
     },
@@ -89,7 +93,9 @@ export function useLogout() {
       queryClient.removeQueries({ queryKey: ["favorites"] })
       queryClient.removeQueries({ queryKey: ["orders"] })
       queryClient.removeQueries({ queryKey: ["order"] })
-      reconnectRealtimeForSession(null)
+      void import("@/infrastructure/realtime/socket").then(
+        ({ reconnectRealtimeForSession }) => reconnectRealtimeForSession(null)
+      )
       void queryClient.invalidateQueries({ queryKey: ["cart"] })
     },
   })

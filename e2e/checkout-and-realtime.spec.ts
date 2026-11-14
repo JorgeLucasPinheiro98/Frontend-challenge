@@ -22,12 +22,31 @@ test.describe("Checkout Idempotente, Resiliência e Tempo Real", () => {
       .click()
 
     await expect(page).toHaveURL(/\/checkout/)
+    await page.evaluate(() => {
+      const state = window as Window & {
+        __kurioOrderUpdates?: Array<{ status: string }>
+      }
+      state.__kurioOrderUpdates = []
+      window.addEventListener("kurio:order-updated", (event) => {
+        const detail = (event as CustomEvent<{ status: string }>).detail
+        state.__kurioOrderUpdates?.push(detail)
+      })
+    })
     await page.getByRole("button", { name: /Confirmar compra/i }).click()
 
     await expect(page).toHaveURL(/\/orders\/ORD-/)
 
-    // Aguarda transição em tempo real (pending -> confirmed) via Socket.IO
-    // O link do explorador (etherscan.io) e o estado final só aparecem após confirmação
+    await expect
+      .poll(() =>
+        page.evaluate(
+          () =>
+            (window as Window & {
+              __kurioOrderUpdates?: Array<{ status: string }>
+            }).__kurioOrderUpdates?.some((event) => event.status === "confirmed") ??
+            false
+        )
+      )
+      .toBe(true)
     await expect(
       page.getByRole("button", { name: "Ver no Etherscan" })
     ).toBeVisible({

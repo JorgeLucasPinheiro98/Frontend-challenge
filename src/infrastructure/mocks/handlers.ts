@@ -8,6 +8,7 @@ import type {
   CartQuoteItem,
   NFT,
   NFTCollection,
+  NftUpdatedEvent,
   Order,
   OrderSnapshotItem,
   PaginatedResponse,
@@ -24,6 +25,7 @@ import {
 } from "@/lib/eth"
 import {
   getDb,
+  broadcastNftEvent,
   mutateNftAndBroadcast,
   mutateOrderAndBroadcast,
   registerSocketBroadcaster,
@@ -54,7 +56,11 @@ const ALL_COLLECTIONS: NFTCollection[] = [
 
 const ALL_NETWORKS: BlockchainNetwork[] = ["Ethereum", "Polygon", "Solana"]
 
-const ALL_PROVIDERS: WalletProvider[] = ["MetaMask", "WalletConnect", "Coinbase Wallet"]
+const ALL_PROVIDERS: WalletProvider[] = [
+  "MetaMask",
+  "WalletConnect",
+  "Coinbase Wallet",
+]
 
 // ==========================================
 // Bridge Socket.IO com MSW
@@ -62,6 +68,7 @@ const ALL_PROVIDERS: WalletProvider[] = ["MetaMask", "WalletConnect", "Coinbase 
 
 type SocketIoClientProxy = ReturnType<typeof toSocketIo>["client"]
 const connectedSocketClients = new Set<SocketIoClientProxy>()
+const emittedNftEvents = new Map<string, NftUpdatedEvent>()
 
 registerSocketBroadcaster({
   emitNftUpdated: (event) => {
@@ -76,7 +83,8 @@ registerSocketBroadcaster({
   },
 })
 
-const socketLink = ws.link(/\/socket\.io\//)
+const socketProtocol = window.location.protocol === "https:" ? "wss:" : "ws:"
+const socketLink = ws.link(`${socketProtocol}//${window.location.host}`)
 
 const socketHandler = socketLink.addEventListener("connection", (connection) => {
   const io = toSocketIo(connection)
@@ -106,7 +114,7 @@ function json(data: unknown, status = 200): HttpResponse<any> {
 }
 
 function sanitizeUser(user: StoredUser): User {
-  const safeUser: User = {
+  return {
     id: user.id,
     name: user.name,
     username: user.username,
@@ -115,7 +123,6 @@ function sanitizeUser(user: StoredUser): User {
     avatarUrl: user.avatarUrl,
     wallets: user.wallets,
   }
-  return safeUser
 }
 
 async function applyNetworkConditions() {
@@ -124,7 +131,8 @@ async function applyNetworkConditions() {
     await delay(150)
     throw new Error("Simulated network failure")
   }
-  const wait = db.scenario === "slow" ? Math.max(db.latencyMs, 1400) : db.latencyMs
+  const wait =
+    db.scenario === "slow" ? Math.max(db.latencyMs, 1400) : db.latencyMs
   if (wait > 0) {
     await delay(wait)
   }
@@ -152,7 +160,6 @@ function getAuthenticatedUser(request: Request): StoredUser | null {
     return db.users.find((u) => u.id === session.userId) ?? null
   }
 
-  // Fallback resiliente caso o Service Worker reinicie em memória com token válido
   const match = /^tok_(usr-[^_]+)_/.exec(token)
   if (match) {
     const recoveredUser = db.users.find((u) => u.id === match[1])
@@ -297,6 +304,7 @@ export const handlers = [
       latencyMs?: number
     }
     resetDb(body.scenario ?? "default", body.latencyMs ?? 180)
+    emittedNftEvents.clear()
     return json({ ok: true })
   }),
 
@@ -309,12 +317,57 @@ export const handlers = [
     return json({ ok: true })
   }),
 
+  http.post("/api/mock/emit-nft", async ({ request }) => {
+    const body = (await request.json()) as {
+      nftId?: string
+      priceEth?: string
+      availableQuantity?: number
+      eventId?: string
+    }
+    const targetId = body.nftId ?? "nft-042"
+    const changes = {
+      ...(body.priceEth !== undefined ? { priceEth: body.priceEth } : {}),
+      ...(body.availableQuantity !== undefined
+        ? { availableQuantity: body.availableQuantity }
+        : {}),
+    }
+    const eventId =
+      typeof body.eventId === "string" ? body.eventId.trim() || undefined : undefined
+    const duplicate = eventId ? emittedNftEvents.get(eventId) : undefined
+
+    if (duplicate) {
+      if (
+        duplicate.nftId !== targetId ||
+        JSON.stringify(duplicate.changes) !== JSON.stringify(changes)
+      ) {
+        return apiError(
+          409,
+          "CONFLICT",
+          "O eventId já foi usado com outro evento."
+        )
+      }
+      broadcastNftEvent(duplicate)
+      return json({ ok: true, event: duplicate })
+    }
+
+    const event = mutateNftAndBroadcast(targetId, changes, eventId)
+    if (!event) {
+      return apiError(404, "NOT_FOUND", "NFT não encontrado.")
+    }
+    if (eventId) emittedNftEvents.set(eventId, event)
+    return json({ ok: true, event })
+  }),
+
   // --- Sessão e Conta ---
   http.post("/api/auth/register", async ({ request }) => {
     try {
       await applyNetworkConditions()
     } catch {
-      return apiError(503, "SERVICE_UNAVAILABLE", "Falha de conexão com o servidor.")
+      return apiError(
+        503,
+        "SERVICE_UNAVAILABLE",
+        "Falha de conexão com o servidor."
+      )
     }
 
     const body = (await request.json()) as {
@@ -335,7 +388,12 @@ export const handlers = [
     }
 
     if (Object.keys(fieldErrors).length > 0) {
-      return apiError(422, "VALIDATION_ERROR", "Verifique os campos destacados.", fieldErrors)
+      return apiError(
+        422,
+        "VALIDATION_ERROR",
+        "Verifique os campos destacados.",
+        fieldErrors
+      )
     }
 
     const db = getDb()
@@ -391,7 +449,11 @@ export const handlers = [
     try {
       await applyNetworkConditions()
     } catch {
-      return apiError(503, "SERVICE_UNAVAILABLE", "Falha de conexão com o servidor.")
+      return apiError(
+        503,
+        "SERVICE_UNAVAILABLE",
+        "Falha de conexão com o servidor."
+      )
     }
 
     const body = (await request.json()) as { email?: string; password?: string }
@@ -459,21 +521,30 @@ export const handlers = [
     try {
       await applyNetworkConditions()
     } catch {
-      return apiError(503, "SERVICE_UNAVAILABLE", "Não foi possível carregar o catálogo.")
+      return apiError(
+        503,
+        "SERVICE_UNAVAILABLE",
+        "Não foi possível carregar o catálogo."
+      )
     }
 
     const db = getDb()
     const url = new URL(request.url)
 
     const q = (url.searchParams.get("q") ?? "").trim().toLowerCase()
-    const collection = url.searchParams.get("collection") as NFTCollection | null
+    const collection = url.searchParams.get(
+      "collection"
+    ) as NFTCollection | null
     const network = url.searchParams.get("network") as BlockchainNetwork | null
     const minPrice = url.searchParams.get("minPrice")
     const maxPrice = url.searchParams.get("maxPrice")
     const tab = url.searchParams.get("tab") ?? "all"
     const sort = url.searchParams.get("sort") ?? "recent"
     const page = Math.max(1, Number(url.searchParams.get("page") ?? "1"))
-    const limit = Math.max(1, Math.min(24, Number(url.searchParams.get("limit") ?? "6")))
+    const limit = Math.max(
+      1,
+      Math.min(24, Number(url.searchParams.get("limit") ?? "6"))
+    )
 
     const baseList = db.scenario === "empty" ? [] : [...db.nfts]
 
@@ -485,7 +556,8 @@ export const handlers = [
     ) as Record<BlockchainNetwork, number>
 
     for (const item of baseList) {
-      collectionsCount[item.collection] = (collectionsCount[item.collection] ?? 0) + 1
+      collectionsCount[item.collection] =
+        (collectionsCount[item.collection] ?? 0) + 1
       networksCount[item.network] = (networksCount[item.network] ?? 0) + 1
     }
 
@@ -512,7 +584,8 @@ export const handlers = [
       filtered.sort((a, b) => compareEth(b.priceEth, a.priceEth))
     } else {
       filtered.sort(
-        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        (a, b) =>
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
       )
     }
 
@@ -543,7 +616,11 @@ export const handlers = [
     try {
       await applyNetworkConditions()
     } catch {
-      return apiError(503, "SERVICE_UNAVAILABLE", "Erro ao carregar detalhes do NFT.")
+      return apiError(
+        503,
+        "SERVICE_UNAVAILABLE",
+        "Erro ao carregar detalhes do NFT."
+      )
     }
 
     const db = getDb()
@@ -560,7 +637,11 @@ export const handlers = [
     try {
       await applyNetworkConditions()
     } catch {
-      return apiError(503, "SERVICE_UNAVAILABLE", "Erro ao carregar favoritos.")
+      return apiError(
+        503,
+        "SERVICE_UNAVAILABLE",
+        "Erro ao carregar favoritos."
+      )
     }
 
     const user = getAuthenticatedUser(request)
@@ -625,11 +706,16 @@ export const handlers = [
     try {
       await applyNetworkConditions()
     } catch {
-      return apiError(503, "SERVICE_UNAVAILABLE", "Falha ao carregar carrinho.")
+      return apiError(
+        503,
+        "SERVICE_UNAVAILABLE",
+        "Falha ao carregar carrinho."
+      )
     }
 
     const url = new URL(request.url)
-    const network = (url.searchParams.get("network") as BlockchainNetwork) || "Ethereum"
+    const network =
+      (url.searchParams.get("network") as BlockchainNetwork) || "Ethereum"
     const user = getAuthenticatedUser(request)
     const quote = buildCartQuote(getCartOwnerKey(user), network)
 
@@ -640,7 +726,11 @@ export const handlers = [
     try {
       await applyNetworkConditions()
     } catch {
-      return apiError(503, "SERVICE_UNAVAILABLE", "Falha ao adicionar item ao carrinho.")
+      return apiError(
+        503,
+        "SERVICE_UNAVAILABLE",
+        "Falha ao adicionar item ao carrinho."
+      )
     }
 
     const body = (await request.json()) as { nftId: string; quantity?: number }
@@ -691,7 +781,11 @@ export const handlers = [
     try {
       await applyNetworkConditions()
     } catch {
-      return apiError(503, "SERVICE_UNAVAILABLE", "Falha ao atualizar quantidade.")
+      return apiError(
+        503,
+        "SERVICE_UNAVAILABLE",
+        "Falha ao atualizar quantidade."
+      )
     }
 
     const body = (await request.json()) as { quantity: number }
@@ -822,17 +916,29 @@ export const handlers = [
     try {
       await applyNetworkConditions()
     } catch {
-      return apiError(503, "SERVICE_UNAVAILABLE", "Falha de rede ao enviar pedido.")
+      return apiError(
+        503,
+        "SERVICE_UNAVAILABLE",
+        "Falha de rede ao enviar pedido."
+      )
     }
 
     const user = getAuthenticatedUser(request)
     if (!user) {
-      return apiError(401, "UNAUTHORIZED", "Sua sessão expirou. Entre novamente para concluir.")
+      return apiError(
+        401,
+        "UNAUTHORIZED",
+        "Sua sessão expirou. Entre novamente para concluir."
+      )
     }
 
     const idempotencyKey = request.headers.get("Idempotency-Key")?.trim()
     if (!idempotencyKey) {
-      return apiError(422, "VALIDATION_ERROR", "Chave de idempotência obrigatória.")
+      return apiError(
+        422,
+        "VALIDATION_ERROR",
+        "Chave de idempotência obrigatória."
+      )
     }
 
     const body = (await request.json()) as {
@@ -840,6 +946,7 @@ export const handlers = [
       network: BlockchainNetwork
       expectedTotalEth: string
       collectorNote?: string
+      cartItems?: unknown
     }
 
     const db = getDb()
@@ -847,29 +954,70 @@ export const handlers = [
     if (!wallet) {
       return apiError(422, "VALIDATION_ERROR", "Selecione uma carteira válida.")
     }
+    if (
+      !Array.isArray(body.cartItems) ||
+      body.cartItems.length === 0 ||
+      !body.cartItems.every(
+        (item): item is { nftId: string; quantity: number } =>
+          typeof item === "object" &&
+          item !== null &&
+          "nftId" in item &&
+          typeof item.nftId === "string" &&
+          item.nftId.length > 0 &&
+          "quantity" in item &&
+          typeof item.quantity === "number" &&
+          Number.isInteger(item.quantity) &&
+          item.quantity > 0
+      )
+    ) {
+      return apiError(
+        422,
+        "VALIDATION_ERROR",
+        "Informe os itens e quantidades válidos do carrinho."
+      )
+    }
 
-    const cart = ensureCart(user.id)
+    const requestedItems = [...body.cartItems].sort((a, b) =>
+      a.nftId.localeCompare(b.nftId)
+    )
+
     const payloadSignature = JSON.stringify({
       userId: user.id,
       walletAddress: wallet.address,
       network: body.network,
-      items: cart.items.map((i) => ({ nftId: i.nftId, quantity: i.quantity })),
       expectedTotalEth: body.expectedTotalEth,
+      collectorNote: body.collectorNote?.trim() || undefined,
+      items: requestedItems,
     })
 
+    // Verifica idempotência ANTES de consultar o carrinho (que já pode ter sido limpo na tentativa original)
     const existingIdempotency = db.idempotency[idempotencyKey]
     if (existingIdempotency) {
-      if (existingIdempotency.payloadSignature !== payloadSignature) {
-        return apiError(
-          409,
-          "IDEMPOTENCY_CONFLICT",
-          "Conflito de idempotência: chave reutilizada com dados diferentes."
-        )
-      }
-      const existingOrder = db.orders.find((o) => o.id === existingIdempotency.orderId)
+      const existingOrder = db.orders.find(
+        (o) => o.id === existingIdempotency.orderId
+      )
       if (existingOrder) {
+        if (existingIdempotency.payloadSignature !== payloadSignature) {
+          return apiError(
+            409,
+            "IDEMPOTENCY_CONFLICT",
+            "Conflito de idempotência: chave reutilizada com dados diferentes."
+          )
+        }
         return json(existingOrder, 200)
       }
+    }
+
+    const cart = ensureCart(user.id)
+    const currentItems = cart.items
+      .map(({ nftId, quantity }) => ({ nftId, quantity }))
+      .sort((a, b) => a.nftId.localeCompare(b.nftId))
+    if (JSON.stringify(currentItems) !== JSON.stringify(requestedItems)) {
+      return apiError(
+        409,
+        "CONFLICT",
+        "A composição do carrinho mudou. Revise os itens antes de confirmar."
+      )
     }
 
     if (db.scenario === "price-change-checkout" && cart.items[0]) {
@@ -974,8 +1122,6 @@ export const handlers = [
 
     saveDb()
 
-    saveDb()
-
     setTimeout(() => {
       if (isRejectedScenario) {
         mutateOrderAndBroadcast(order.id, {
@@ -1010,7 +1156,11 @@ export const handlers = [
     try {
       await applyNetworkConditions()
     } catch {
-      return apiError(503, "SERVICE_UNAVAILABLE", "Erro ao carregar histórico de pedidos.")
+      return apiError(
+        503,
+        "SERVICE_UNAVAILABLE",
+        "Erro ao carregar histórico de pedidos."
+      )
     }
 
     const user = getAuthenticatedUser(request)
@@ -1043,7 +1193,6 @@ export const handlers = [
       return apiError(404, "NOT_FOUND", "Pedido não encontrado.")
     }
 
-    // Se o pedido ainda estiver pendente após 1.2s (ex: SW suspenso), liquida agora
     if (
       order.status === "pending" &&
       Date.now() - new Date(order.createdAt).getTime() >= 1200
@@ -1108,7 +1257,12 @@ export const handlers = [
       fieldErrors.email = "Formato de e-mail inválido."
     }
     if (Object.keys(fieldErrors).length > 0) {
-      return apiError(422, "VALIDATION_ERROR", "Corrija os campos do perfil.", fieldErrors)
+      return apiError(
+        422,
+        "VALIDATION_ERROR",
+        "Corrija os campos do perfil.",
+        fieldErrors
+      )
     }
 
     const db = getDb()
@@ -1168,7 +1322,10 @@ export const handlers = [
       newPassword?: string
     }
 
-    if (!body.currentPassword || user.passwordHash !== hashMockPassword(body.currentPassword)) {
+    if (
+      !body.currentPassword ||
+      user.passwordHash !== hashMockPassword(body.currentPassword)
+    ) {
       return apiError(422, "VALIDATION_ERROR", "Senha atual incorreta.", {
         currentPassword: "A senha atual não confere.",
       })
@@ -1190,7 +1347,11 @@ export const handlers = [
     try {
       await applyNetworkConditions()
     } catch {
-      return apiError(503, "SERVICE_UNAVAILABLE", "Falha ao cadastrar carteira.")
+      return apiError(
+        503,
+        "SERVICE_UNAVAILABLE",
+        "Falha ao cadastrar carteira."
+      )
     }
 
     const user = getAuthenticatedUser(request)
@@ -1221,7 +1382,12 @@ export const handlers = [
     }
 
     if (Object.keys(fieldErrors).length > 0) {
-      return apiError(422, "VALIDATION_ERROR", "Dados da carteira inválidos.", fieldErrors)
+      return apiError(
+        422,
+        "VALIDATION_ERROR",
+        "Dados da carteira inválidos.",
+        fieldErrors
+      )
     }
 
     const shouldBePrimary = Boolean(body.isPrimary) || user.wallets.length === 0
@@ -1250,7 +1416,11 @@ export const handlers = [
     try {
       await applyNetworkConditions()
     } catch {
-      return apiError(503, "SERVICE_UNAVAILABLE", "Falha ao atualizar carteira.")
+      return apiError(
+        503,
+        "SERVICE_UNAVAILABLE",
+        "Falha ao atualizar carteira."
+      )
     }
 
     const user = getAuthenticatedUser(request)

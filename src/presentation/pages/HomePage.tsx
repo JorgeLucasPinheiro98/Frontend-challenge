@@ -594,7 +594,7 @@ export function HomePage() {
             ) : (
               <>
                 <div className="grid grid-cols-2 gap-4 sm:gap-6 xl:grid-cols-3">
-                  {catalogQuery.data?.data.map((nft) => {
+                  {catalogQuery.data?.data.map((nft, index) => {
                     const isFav = favorites.includes(nft.id)
                     return (
                       <article key={nft.id} className="group flex flex-col">
@@ -632,7 +632,8 @@ export function HomePage() {
                               alt={nft.title}
                               width={400}
                               height={400}
-                              loading="lazy"
+                              loading={index === 0 ? "eager" : "lazy"}
+                              fetchPriority={index === 0 ? "high" : "auto"}
                               className="aspect-square w-full object-cover transition-transform duration-300 group-hover:scale-105"
                             />
                           </Link>

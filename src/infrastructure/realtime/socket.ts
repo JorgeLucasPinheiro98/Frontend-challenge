@@ -28,13 +28,8 @@ export function initRealtimeSync(queryClient: QueryClient): () => void {
     return () => {}
   }
 
-  // Em preview/produção sem servidor Socket.IO real, evita tentativas infinitas de WebSocket
-  const isPreviewWithoutBackend =
-    typeof window !== "undefined" &&
-    window.location.port === "4173" &&
-    import.meta.env.VITE_ENABLE_SOCKET !== "true"
-
-  if (isPreviewWithoutBackend) {
+  // Permite desativar explicitamente apenas quando VITE_ENABLE_SOCKET="false"
+  if (import.meta.env.VITE_ENABLE_SOCKET === "false") {
     return () => {}
   }
 
@@ -42,7 +37,7 @@ export function initRealtimeSync(queryClient: QueryClient): () => void {
     path: "/socket.io/",
     transports: ["websocket"],
     reconnection: true,
-    reconnectionAttempts: 2,
+    reconnectionAttempts: 3,
     reconnectionDelay: 500,
     reconnectionDelayMax: 2000,
   })
@@ -50,13 +45,14 @@ export function initRealtimeSync(queryClient: QueryClient): () => void {
   socketInstance = socket
 
   socket.on("connect_error", () => {
-    // Se não houver servidor WS ativo após as tentativas iniciais, encerra silenciosamente
-    if (!hasConnectedOnce && socket.io.reconnectionAttempts() <= 2) {
+    // Se falhar após as tentativas iniciais sem ter conectado antes, encerra sem poluir o console
+    if (!hasConnectedOnce && !socket.active) {
       socket.disconnect()
     }
   })
 
   socket.on("connect", () => {
+    window.dispatchEvent(new Event("kurio:socket-connected"))
     if (hasConnectedOnce) {
       // Reconcilia recursos ativos com a API REST após reconexão
       void queryClient.invalidateQueries({ queryKey: ["nfts"] })
@@ -66,6 +62,10 @@ export function initRealtimeSync(queryClient: QueryClient): () => void {
       void queryClient.invalidateQueries({ queryKey: ["order"] })
     }
     hasConnectedOnce = true
+  })
+
+  socket.on("disconnect", () => {
+    window.dispatchEvent(new Event("kurio:socket-disconnected"))
   })
 
   socket.on("nft.updated", (event: NftUpdatedEvent) => {
@@ -155,6 +155,11 @@ export function initRealtimeSync(queryClient: QueryClient): () => void {
       void queryClient.invalidateQueries({ queryKey: ["nfts"] })
       void queryClient.invalidateQueries({ queryKey: ["nft"] })
     }
+    window.dispatchEvent(
+      new CustomEvent<OrderUpdatedEvent>("kurio:order-updated", {
+        detail: event,
+      })
+    )
   })
 
   return () => {

@@ -77,16 +77,18 @@ export function useCreateOrder() {
       network,
       expectedTotalEth,
       collectorNote,
+      cartItems,
     }: {
       idempotencyKey: string
       walletId: string
       network: BlockchainNetwork
       expectedTotalEth: string
       collectorNote?: string
+      cartItems: Array<{ nftId: string; quantity: number }>
     }) => {
       const { data } = await apiClient.post<Order>(
         "/orders",
-        { walletId, network, expectedTotalEth, collectorNote },
+        { walletId, network, expectedTotalEth, collectorNote, cartItems },
         {
           headers: {
             "Idempotency-Key": idempotencyKey,
